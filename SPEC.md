@@ -64,8 +64,7 @@ The v0.1 output is CAB-compatible JSON:
   "reasons": [],
   "evidence": {
     "mode": "DEMO",
-    "source": "liquid-witness",
-    "descriptor_scope": "ct(elwpk...)"
+    "source": "liquid-witness"
   },
   "generated_at": "2026-08-06T00:00:00Z"
 }

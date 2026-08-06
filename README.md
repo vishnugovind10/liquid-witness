@@ -63,10 +63,10 @@ cargo install --path crates/witness-cli
 Run the committed fixture path:
 
 ```bash
+export WITNESS_CT_DESCRIPTOR="<throwaway-testnet-watch-only-descriptor>"
 cargo run -p witness-cli -- verify \
   --claim tests/fixtures/demo-issuer-claim.json \
   --asset-id abababababababababababababababababababababababababababababababab \
-  --descriptor "ct(elwpk([00000000/84h/1h/0h]tpub-demo/0/*))" \
   --fixture tests/fixtures/demo-observed-state.json \
   --out examples/testnet-amp-scan/output.cab
 ```
@@ -89,15 +89,18 @@ cargo run -p witness-cli -- verify-bundle --cab examples/testnet-amp-scan/output
 Live capture is intentionally opt-in and requires manual amp-demo inputs:
 
 ```bash
+export $(cat .env | xargs)
 cargo run -p witness-cli --features live-lwk -- verify --live \
   --claim path/to/amp-demo-claim.json \
-  --asset-id <amp-demo-asset-id> \
-  --descriptor "<watch-only-ct-descriptor>" \
+  --asset-id "$WITNESS_ASSET_ID" \
   --network testnet \
-  --txid <explorer-confirmed-txid> \
+  --electrum-url "$WITNESS_ELECTRUM_URL" \
+  --txid "$WITNESS_EXPECT_TXID" \
   --gaid-redacted "<gaid-prefix>...<gaid-suffix>" \
   --out examples/testnet-amp-scan/live-output.cab
 ```
+
+The descriptor is read from `WITNESS_CT_DESCRIPTOR` in a gitignored `.env`, not passed inline.
 
 The command exits `0` only if the LWK-derived scoped amount matches the claim. It exits `1` for `MISMATCH` and `2` for incomplete scan coverage.
 
@@ -106,6 +109,7 @@ The command exits `0` only if the LWK-derived scoped amount matches the claim. I
 - CAB-compatible JSON output with stable verdict and exit-code semantics.
 - Pure recomputation logic for total supply and holder-category distribution.
 - A watch-only descriptor guard that rejects obvious signer material.
+- Environment-based descriptor loading so view-sensitive CT descriptors are not placed in shell history.
 - A feature-gated LWK Electrum scan path using `elements-testnet.blockstream.info:50002`.
 - CI-safe replay fixtures that do not make live-chain claims.
 
@@ -131,6 +135,10 @@ cargo build --workspace
 - Blockstream LWK and `lwk_wollet` are the intended live scan boundary.
 - `liquid-proofpack` is the CAB format companion this repository targets.
 - Liquid Confidential Transactions and AMP define the protocol context; this repository only verifies scoped evidence it is given.
+
+## Blockstream Adoption
+
+See [docs/BLOCKSTREAM_ADOPTION.md](docs/BLOCKSTREAM_ADOPTION.md) for the review path, public sharing checklist, and exact evidence boundary before a `v0.2.0` live-testnet release.
 
 ## Citation
 

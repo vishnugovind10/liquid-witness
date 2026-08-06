@@ -4,3 +4,10 @@
 *.log
 *.tmp
 .DS_Store
+
+# Live-scan local secrets - never commit
+.env
+.env.local
+secrets.local.toml
+*.descriptor
+examples/testnet-amp-scan/*.local.*

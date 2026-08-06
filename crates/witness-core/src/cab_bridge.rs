@@ -11,6 +11,7 @@ pub struct CabBundle {
     pub claim: CabClaim,
     pub observed: ObservedState,
     pub verdict: Verdict,
+    pub supply_delta: i64,
     pub reasons: Vec<String>,
     pub evidence: EvidenceSource,
     pub generated_at: String,
@@ -32,7 +33,6 @@ pub struct CabClaim {
 pub struct EvidenceSource {
     pub mode: String,
     pub source: String,
-    pub descriptor_scope: String,
 }
 
 impl CabBundle {
@@ -41,7 +41,7 @@ impl CabBundle {
         observed: ObservedState,
         diff: DiffResult,
         network: impl Into<String>,
-        descriptor_scope: impl Into<String>,
+        _descriptor_scope: impl Into<String>,
     ) -> Self {
         let generated_at = OffsetDateTime::now_utc()
             .format(&Rfc3339)
@@ -63,11 +63,11 @@ impl CabBundle {
             },
             observed,
             verdict: diff.verdict,
+            supply_delta: diff.observed_total_supply as i64 - diff.claimed_total_supply as i64,
             reasons: diff.reasons,
             evidence: EvidenceSource {
                 mode: mode.to_string(),
                 source: "liquid-witness".to_string(),
-                descriptor_scope: descriptor_scope.into(),
             },
             generated_at,
         }
@@ -110,5 +110,41 @@ mod tests {
         assert_eq!(bundle.verdict, Verdict::Demo);
         assert_eq!(bundle.claim.claim_sha256, claim_hash(&claim));
         assert_eq!(bundle.evidence.mode, "DEMO");
+        assert_eq!(bundle.supply_delta, 0);
+    }
+
+    #[test]
+    fn cab_json_never_serializes_descriptor_material() {
+        let secret_descriptor =
+            "ct(slip77(super-secret-test-descriptor),elwpkh([abcd1234]tpub-secret/0/*))";
+        let claim = IssuerClaim {
+            asset_id: "cd".repeat(32),
+            total_supply: 7,
+            holders: vec![HolderAmount {
+                category: "descriptor-scope".to_string(),
+                amount: 7,
+            }],
+        };
+        let observed = ObservedState {
+            asset_id: claim.asset_id.clone(),
+            total_supply: 7,
+            holders: claim.holders.clone(),
+            complete: true,
+            demo: false,
+            source: "lwk_wollet full_scan_with_electrum_client".to_string(),
+            live_evidence: Some(crate::LiveEvidence {
+                endpoint: "elements-testnet.blockstream.info:50002".to_string(),
+                tx_count: 1,
+                txid: Some("11".repeat(32)),
+                gaid_redacted: Some("gaid...redacted".to_string()),
+            }),
+        };
+        let diff = diff_claim(&claim, &observed).unwrap();
+        let bundle = CabBundle::from_diff(&claim, observed, diff, "testnet", secret_descriptor);
+        let json = serde_json::to_string(&bundle).unwrap();
+
+        assert!(!json.contains(secret_descriptor));
+        assert!(!json.contains("super-secret-test-descriptor"));
+        assert!(!json.contains("tpub-secret"));
     }
 }

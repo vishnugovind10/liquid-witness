@@ -26,13 +26,13 @@
     "source": "committed fixture; no live Liquid testnet scan"
   },
   "verdict": "DEMO",
+  "supply_delta": 0,
   "reasons": [
     "fixture-backed run; no live Liquid/LWK round trip was performed"
   ],
   "evidence": {
     "mode": "DEMO",
-    "source": "liquid-witness",
-    "descriptor_scope": "ct(elwpk([00000000..."
+    "source": "liquid-witness"
   },
-  "generated_at": "2026-08-06T08:17:26.0391592Z"
+  "generated_at": "2026-08-06T08:53:34.1803246Z"
 }

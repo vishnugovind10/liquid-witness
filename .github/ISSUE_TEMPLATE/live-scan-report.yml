@@ -1,0 +1,47 @@
+name: Live scan report
+description: Report a reproducible Liquid testnet scan without sharing descriptor material.
+title: "Live scan: <asset-id-prefix>... verdict <VERDICT>"
+labels: ["live-scan", "evidence"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not paste CT descriptors, xpub/xprv material, mnemonics, seeds, or unredacted GAIDs.
+  - type: input
+    id: verdict
+    attributes:
+      label: Verdict
+      description: VERIFIED, MISMATCH, INCOMPLETE, or DEMO.
+      placeholder: VERIFIED
+    validations:
+      required: true
+  - type: input
+    id: asset
+    attributes:
+      label: Asset ID
+      description: Public testnet asset ID.
+      placeholder: "<64-char-hex-asset-id>"
+    validations:
+      required: true
+  - type: input
+    id: txid
+    attributes:
+      label: Sanity-check txid
+      description: Public Liquid testnet transaction ID used to confirm receipt.
+      placeholder: "<txid>"
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command shape
+      description: Redact paths and never include the descriptor value.
+      render: bash
+      placeholder: |
+        export $(cat .env | xargs)
+        witness verify --live --asset-id "$WITNESS_ASSET_ID" ...
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Explain timing, confirmations, or mismatch/incomplete reasons.

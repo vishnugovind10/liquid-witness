@@ -14,10 +14,10 @@ cargo build --workspace
 ## Demo CAB Artifact
 
 ```bash
+export WITNESS_CT_DESCRIPTOR="<throwaway-testnet-watch-only-descriptor>"
 cargo run -p witness-cli -- verify \
   --claim tests/fixtures/demo-issuer-claim.json \
   --asset-id abababababababababababababababababababababababababababababababab \
-  --descriptor "ct(elwpk([00000000/84h/1h/0h]tpub-demo/0/*))" \
   --fixture tests/fixtures/demo-observed-state.json \
   --out examples/testnet-amp-scan/output.cab
 ```
@@ -35,20 +35,21 @@ cargo run -p witness-cli -- verify-bundle --cab examples/testnet-amp-scan/output
 Without `--fixture` or `--live`, the command returns `INCOMPLETE` rather than pretending to have scanned a complete public AMP asset:
 
 ```bash
+export WITNESS_CT_DESCRIPTOR="<throwaway-testnet-watch-only-descriptor>"
 cargo run -p witness-cli -- scan \
-  --asset-id abababababababababababababababababababababababababababababababab \
-  --descriptor "ct(elwpk([00000000/84h/1h/0h]tpub-demo/0/*))"
+  --asset-id abababababababababababababababababababababababababababababababab
 ```
 
 ## Live Testnet Capture Procedure
 
 Manual prerequisites:
 
-1. Create a Liquid testnet wallet in Blockstream Green or with LWK tooling.
-2. Create a Managed Assets Account and record the GAID.
-3. Use `amp-demo.blockstream.com` to request the Issuer-Tracked demo asset.
-4. Record the asset ID, receiving CT address, claimed amount, txid, and watch-only CT descriptor.
-5. Confirm the txid on a Liquid testnet explorer before running `liquid-witness`.
+1. Generate a throwaway Liquid testnet wallet for this; do not reuse a wallet holding anything of value.
+2. Create the wallet in Blockstream Green or with LWK tooling.
+3. Create a Managed Assets Account and record the GAID.
+4. Use `amp-demo.blockstream.com` to request the Issuer-Tracked demo asset.
+5. Record the asset ID, receiving CT address, claimed amount, txid, and watch-only CT descriptor.
+6. Confirm the txid on a Liquid testnet explorer before running `liquid-witness`.
 
 Create a claim file matching the scoped amount you expect the descriptor to observe:
 
@@ -68,14 +69,17 @@ Create a claim file matching the scoped amount you expect the descriptor to obse
 Capture the live CAB:
 
 ```bash
+export $(cat .env | xargs)
 cargo run -p witness-cli --features live-lwk -- verify --live \
   --claim path/to/amp-demo-claim.json \
-  --asset-id <amp-demo-asset-id> \
-  --descriptor "<watch-only-ct-descriptor>" \
+  --asset-id "$WITNESS_ASSET_ID" \
   --network testnet \
-  --txid <explorer-confirmed-txid> \
+  --electrum-url "$WITNESS_ELECTRUM_URL" \
+  --txid "$WITNESS_EXPECT_TXID" \
   --gaid-redacted "<gaid-prefix>...<gaid-suffix>" \
   --out examples/testnet-amp-scan/live-output.cab
 ```
+
+The descriptor is read from `WITNESS_CT_DESCRIPTOR` in `.env`, not passed inline.
 
 Only commit `live-output.cab` after the command has genuinely scanned `elements-testnet.blockstream.info:50002` and the output shows `LIVE_OR_REPLAY` evidence.

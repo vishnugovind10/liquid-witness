@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand, ValueEnum};
+use std::env;
 use std::fs;
 use std::path::PathBuf;
 use witness_core::{diff_claim, CabBundle, HolderAmount, IssuerClaim, ObservedState, Verdict};
@@ -18,8 +19,8 @@ enum Commands {
     Scan {
         #[arg(long)]
         asset_id: String,
-        #[arg(long)]
-        descriptor: String,
+        #[arg(hide = true, long)]
+        descriptor: Option<String>,
         #[arg(long, default_value = "testnet")]
         network: String,
         #[arg(long)]
@@ -40,8 +41,8 @@ enum Commands {
         claim: PathBuf,
         #[arg(long)]
         asset_id: String,
-        #[arg(long)]
-        descriptor: String,
+        #[arg(hide = true, long)]
+        descriptor: Option<String>,
         #[arg(long, default_value = "testnet")]
         network: String,
         #[arg(long)]
@@ -75,6 +76,7 @@ enum ExportFormat {
 }
 
 fn main() -> Result<()> {
+    dotenvy::dotenv().ok();
     let cli = Cli::parse();
     let verdict = match cli.command {
         Commands::Scan {
@@ -88,6 +90,7 @@ fn main() -> Result<()> {
             gaid_redacted,
             live,
         } => {
+            let descriptor = resolve_descriptor(descriptor)?;
             let state = observed_state(ObserveInput {
                 asset_id,
                 descriptor,
@@ -120,6 +123,7 @@ fn main() -> Result<()> {
             live,
         } => {
             let claim = read_claim(&claim)?;
+            let descriptor = resolve_descriptor(descriptor)?;
             let observed = observed_state(ObserveInput {
                 asset_id,
                 descriptor: descriptor.clone(),
@@ -131,13 +135,8 @@ fn main() -> Result<()> {
                 live,
             })?;
             let diff = diff_claim(&claim, &observed)?;
-            let bundle = CabBundle::from_diff(
-                &claim,
-                observed,
-                diff,
-                network,
-                descriptor_scope(&descriptor),
-            );
+            let bundle =
+                CabBundle::from_diff(&claim, observed, diff, network, "env:WITNESS_CT_DESCRIPTOR");
             let verdict = bundle.verdict.clone();
             write_json_or_stdout(&bundle, out)?;
             verdict
@@ -189,6 +188,15 @@ fn observed_state(input: ObserveInput) -> Result<ObservedState> {
     }
 }
 
+fn resolve_descriptor(cli_descriptor: Option<String>) -> Result<String> {
+    if let Some(descriptor) = cli_descriptor {
+        return Ok(descriptor);
+    }
+    env::var("WITNESS_CT_DESCRIPTOR").context(
+        "missing WITNESS_CT_DESCRIPTOR; copy .env.example to .env and fill the watch-only CT descriptor",
+    )
+}
+
 fn read_claim(path: &PathBuf) -> Result<IssuerClaim> {
     read_json(path).with_context(|| format!("failed to read issuer claim {}", path.display()))
 }
@@ -206,11 +214,6 @@ fn write_json_or_stdout<T: serde::Serialize>(value: &T, out: Option<PathBuf>) ->
         println!("{json}");
     }
     Ok(())
-}
-
-fn descriptor_scope(descriptor: &str) -> String {
-    let prefix: String = descriptor.chars().take(18).collect();
-    format!("{prefix}...")
 }
 
 fn example_bundle() -> Result<CabBundle> {

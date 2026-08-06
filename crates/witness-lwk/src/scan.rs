@@ -40,7 +40,7 @@ pub fn scan_fixture(path: &Path) -> Result<ObservedState, ScanError> {
 }
 
 pub fn scan_live_incomplete(request: &ScanRequest) -> Result<ObservedState, ScanError> {
-    let descriptor = WatchOnlyDescriptor::parse(request.descriptor.clone())?;
+    let _descriptor = WatchOnlyDescriptor::parse(request.descriptor.clone())?;
     Ok(ObservedState {
         asset_id: request.asset_id.clone(),
         total_supply: 0,
@@ -48,13 +48,11 @@ pub fn scan_live_incomplete(request: &ScanRequest) -> Result<ObservedState, Scan
         complete: false,
         demo: false,
         source: format!(
-            "live LWK scan requires --features live-lwk for {}; descriptor {}",
-            electrum_endpoint(request),
-            descriptor.redacted_scope()
+            "live LWK scan requires --features live-lwk for {}",
+            electrum_endpoint(request)
         ),
         live_evidence: Some(LiveEvidence {
             endpoint: electrum_endpoint(request),
-            descriptor_scope: descriptor.redacted_scope(),
             tx_count: 0,
             txid: request.txid.clone(),
             gaid_redacted: request.gaid_redacted.clone(),
@@ -121,7 +119,6 @@ pub fn scan_live(request: &ScanRequest) -> Result<ObservedState, ScanError> {
         source: "lwk_wollet full_scan_with_electrum_client".to_string(),
         live_evidence: Some(LiveEvidence {
             endpoint,
-            descriptor_scope: descriptor.redacted_scope(),
             tx_count,
             txid: request.txid.clone(),
             gaid_redacted: request.gaid_redacted.clone(),

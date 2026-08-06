@@ -31,7 +31,6 @@ pub struct ObservedState {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct LiveEvidence {
     pub endpoint: String,
-    pub descriptor_scope: String,
     pub tx_count: usize,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub txid: Option<String>,
