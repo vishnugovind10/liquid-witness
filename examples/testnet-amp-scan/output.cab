@@ -1,0 +1,38 @@
+{
+  "cab_version": "0.1-compatible",
+  "subject": {
+    "asset_id": "abababababababababababababababababababababababababababababababab",
+    "network": "testnet"
+  },
+  "claim": {
+    "total_supply": 1000,
+    "claim_sha256": "78a67af8224cedcb29bec921f6954fb7dcf71e10a59ad9a0ce0a0708e136a282"
+  },
+  "observed": {
+    "asset_id": "abababababababababababababababababababababababababababababababab",
+    "total_supply": 1000,
+    "holders": [
+      {
+        "category": "qualified-investor",
+        "amount": 700
+      },
+      {
+        "category": "issuer-treasury",
+        "amount": 300
+      }
+    ],
+    "complete": true,
+    "demo": true,
+    "source": "committed fixture; no live Liquid testnet scan"
+  },
+  "verdict": "DEMO",
+  "reasons": [
+    "fixture-backed run; no live Liquid/LWK round trip was performed"
+  ],
+  "evidence": {
+    "mode": "DEMO",
+    "source": "liquid-witness",
+    "descriptor_scope": "ct(elwpk([00000000..."
+  },
+  "generated_at": "2026-08-06T08:17:26.0391592Z"
+}

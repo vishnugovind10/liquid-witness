@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use liquid-witness, please cite this repository."
+title: "liquid-witness: CAB-compatible Liquid/AMP asset-claim verification"
+version: "0.1.0"
+date-released: "2026-08-06"
+authors:
+  - family-names: "Govind"
+    given-names: "Vishnu"
+license: "MIT"
+repository-code: "https://github.com/vishnugovind10/liquid-witness"
+url: "https://github.com/vishnugovind10/liquid-witness"
+keywords:
+  - "Liquid"
+  - "LWK"
+  - "Confidential Transactions"
+  - "AMP"
+  - "CAB"

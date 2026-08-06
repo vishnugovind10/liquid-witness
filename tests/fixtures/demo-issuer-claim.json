@@ -1,0 +1,14 @@
+{
+  "asset_id": "abababababababababababababababababababababababababababababababab",
+  "total_supply": 1000,
+  "holders": [
+    {
+      "category": "qualified-investor",
+      "amount": 700
+    },
+    {
+      "category": "issuer-treasury",
+      "amount": 300
+    }
+  ]
+}
