@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use std::fs;
 use std::path::PathBuf;
 use witness_core::{diff_claim, CabBundle, HolderAmount, IssuerClaim, ObservedState, Verdict};
-use witness_lwk::{scan_fixture, scan_live_incomplete, ScanRequest};
+use witness_lwk::{scan_fixture, scan_live, scan_live_incomplete, ScanRequest};
 
 #[derive(Parser)]
 #[command(name = "witness")]
@@ -26,6 +26,14 @@ enum Commands {
         fixture: Option<PathBuf>,
         #[arg(long)]
         out: Option<PathBuf>,
+        #[arg(long)]
+        electrum_url: Option<String>,
+        #[arg(long)]
+        txid: Option<String>,
+        #[arg(long)]
+        gaid_redacted: Option<String>,
+        #[arg(long)]
+        live: bool,
     },
     Verify {
         #[arg(long)]
@@ -40,6 +48,14 @@ enum Commands {
         fixture: Option<PathBuf>,
         #[arg(long)]
         out: Option<PathBuf>,
+        #[arg(long)]
+        electrum_url: Option<String>,
+        #[arg(long)]
+        txid: Option<String>,
+        #[arg(long)]
+        gaid_redacted: Option<String>,
+        #[arg(long)]
+        live: bool,
     },
     VerifyBundle {
         #[arg(long)]
@@ -67,8 +83,21 @@ fn main() -> Result<()> {
             network,
             fixture,
             out,
+            electrum_url,
+            txid,
+            gaid_redacted,
+            live,
         } => {
-            let state = observed_state(asset_id, descriptor, network, fixture)?;
+            let state = observed_state(ObserveInput {
+                asset_id,
+                descriptor,
+                network,
+                fixture,
+                electrum_url,
+                txid,
+                gaid_redacted,
+                live,
+            })?;
             write_json_or_stdout(&state, out)?;
             if state.demo {
                 Verdict::Demo
@@ -85,9 +114,22 @@ fn main() -> Result<()> {
             network,
             fixture,
             out,
+            electrum_url,
+            txid,
+            gaid_redacted,
+            live,
         } => {
             let claim = read_claim(&claim)?;
-            let observed = observed_state(asset_id, descriptor.clone(), network.clone(), fixture)?;
+            let observed = observed_state(ObserveInput {
+                asset_id,
+                descriptor: descriptor.clone(),
+                network: network.clone(),
+                fixture,
+                electrum_url,
+                txid,
+                gaid_redacted,
+                live,
+            })?;
             let diff = diff_claim(&claim, &observed)?;
             let bundle = CabBundle::from_diff(
                 &claim,
@@ -116,23 +158,35 @@ fn main() -> Result<()> {
     std::process::exit(verdict.exit_code().0);
 }
 
-fn observed_state(
+struct ObserveInput {
     asset_id: String,
     descriptor: String,
     network: String,
     fixture: Option<PathBuf>,
-) -> Result<ObservedState> {
-    if let Some(path) = fixture {
+    electrum_url: Option<String>,
+    txid: Option<String>,
+    gaid_redacted: Option<String>,
+    live: bool,
+}
+
+fn observed_state(input: ObserveInput) -> Result<ObservedState> {
+    if let Some(path) = input.fixture {
         return scan_fixture(&path)
             .with_context(|| format!("failed to load fixture {}", path.display()));
     }
     let request = ScanRequest {
-        asset_id,
-        descriptor,
-        network,
-        electrum_url: None,
+        asset_id: input.asset_id,
+        descriptor: input.descriptor,
+        network: input.network,
+        electrum_url: input.electrum_url,
+        txid: input.txid,
+        gaid_redacted: input.gaid_redacted,
     };
-    scan_live_incomplete(&request).context("live scan boundary failed")
+    if input.live {
+        scan_live(&request).context("live scan failed")
+    } else {
+        scan_live_incomplete(&request).context("live scan boundary failed")
+    }
 }
 
 fn read_claim(path: &PathBuf) -> Result<IssuerClaim> {
@@ -182,6 +236,7 @@ fn example_bundle() -> Result<CabBundle> {
         complete: true,
         demo: true,
         source: "examples/testnet-amp-scan/output.cab".to_string(),
+        live_evidence: None,
     };
     let diff = diff_claim(&claim, &observed)?;
     Ok(CabBundle::from_diff(

@@ -24,6 +24,19 @@ pub struct ObservedState {
     pub complete: bool,
     pub demo: bool,
     pub source: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub live_evidence: Option<LiveEvidence>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct LiveEvidence {
+    pub endpoint: String,
+    pub descriptor_scope: String,
+    pub tx_count: usize,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub txid: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gaid_redacted: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -152,6 +165,7 @@ mod tests {
             complete,
             demo,
             source: "fixture".to_string(),
+            live_evidence: None,
         }
     }
 

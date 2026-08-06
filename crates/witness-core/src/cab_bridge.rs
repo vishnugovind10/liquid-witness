@@ -101,6 +101,7 @@ mod tests {
             complete: true,
             demo: true,
             source: "tests/fixtures/demo-observed-state.json".to_string(),
+            live_evidence: None,
         };
         let diff = diff_claim(&claim, &observed).unwrap();
         let bundle =

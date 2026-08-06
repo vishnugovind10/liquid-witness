@@ -5,6 +5,7 @@
 - Validate a public AMP0 testnet asset and descriptor.
 - Replace the default demo artifact with reproducible live or recorded `VERIFIED` evidence.
 - Add fixture capture tooling for Electrum/Esplora responses.
+- Commit `examples/testnet-amp-scan/live-output.cab` only after a real amp-demo scan.
 
 ## v0.3
 

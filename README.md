@@ -38,7 +38,7 @@ crates/witness-core   pure verdict logic, recomputation, CAB bridge
 crates/witness-lwk    only crate allowed to touch lwk_wollet/LWK scan boundaries
 crates/witness-cli    witness binary
 tests/fixtures        committed replay fixtures; no live network in CI
-examples              DEMO CAB artifact and liquid-proofpack bundle workflow
+examples              DEMO CAB artifact; live-output.cab is added only after real capture
 ```
 
 ## Scope & Honesty
@@ -50,7 +50,7 @@ examples              DEMO CAB artifact and liquid-proofpack bundle workflow
 | `INCOMPLETE` | The scan ran but did not cover the full claim. | `2` |
 | `DEMO` | The command ran against committed fixtures only. It is not pass/fail evidence. | `3` |
 
-v0.1.0 ships a compiled LWK boundary and a fixture-backed demonstration path. It does not claim a reproducible public AMP testnet `VERIFIED` result because no public asset descriptor was validated during this build.
+v0.2 development wires the feature-gated LWK Electrum capture path. A reproducible public AMP testnet `VERIFIED` artifact is not claimed until `examples/testnet-amp-scan/live-output.cab` is captured from a real amp-demo asset and committed.
 
 ## Install
 
@@ -84,12 +84,29 @@ Inspect a CAB-compatible bundle:
 cargo run -p witness-cli -- verify-bundle --cab examples/testnet-amp-scan/output.cab
 ```
 
+## Live Testnet Capture
+
+Live capture is intentionally opt-in and requires manual amp-demo inputs:
+
+```bash
+cargo run -p witness-cli --features live-lwk -- verify --live \
+  --claim path/to/amp-demo-claim.json \
+  --asset-id <amp-demo-asset-id> \
+  --descriptor "<watch-only-ct-descriptor>" \
+  --network testnet \
+  --txid <explorer-confirmed-txid> \
+  --gaid-redacted "<gaid-prefix>...<gaid-suffix>" \
+  --out examples/testnet-amp-scan/live-output.cab
+```
+
+The command exits `0` only if the LWK-derived scoped amount matches the claim. It exits `1` for `MISMATCH` and `2` for incomplete scan coverage.
+
 ## What This Demonstrates
 
 - CAB-compatible JSON output with stable verdict and exit-code semantics.
 - Pure recomputation logic for total supply and holder-category distribution.
 - A watch-only descriptor guard that rejects obvious signer material.
-- An isolated `witness-lwk` crate where real Liquid/LWK scan work belongs.
+- A feature-gated LWK Electrum scan path using `elements-testnet.blockstream.info:50002`.
 - CI-safe replay fixtures that do not make live-chain claims.
 
 ## What This Does Not Demonstrate
@@ -98,7 +115,7 @@ cargo run -p witness-cli -- verify-bundle --cab examples/testnet-amp-scan/output
 - No validated public AMP2 scan depth.
 - No Jade or hardware-signer path; this tool does not sign.
 - No audit opinion, legal assurance, investment recommendation, or production attestation.
-- No `VERIFIED` verdict unless a complete Liquid/Electrum or replay observation actually supports it.
+- No committed live `VERIFIED` artifact until amp-demo asset ID, txid, descriptor scope, and claimed amount are captured.
 
 ## Development
 

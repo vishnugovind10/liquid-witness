@@ -16,4 +16,4 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 witness-core.workspace = true
-lwk_wollet = { version = "0.17", features = ["esplora", "amp0", "amp2"], optional = true }
+lwk_wollet = { version = "0.17", features = ["electrum", "amp0", "amp2"], optional = true }

@@ -3,7 +3,9 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 use thiserror::Error;
-use witness_core::ObservedState;
+#[cfg(feature = "live-lwk")]
+use witness_core::HolderAmount;
+use witness_core::{LiveEvidence, ObservedState};
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ScanRequest {
@@ -11,6 +13,8 @@ pub struct ScanRequest {
     pub descriptor: String,
     pub network: String,
     pub electrum_url: Option<String>,
+    pub txid: Option<String>,
+    pub gaid_redacted: Option<String>,
 }
 
 #[derive(Debug, Error)]
@@ -21,6 +25,12 @@ pub enum ScanError {
     FixtureRead(String),
     #[error("fixture parse failed: {0}")]
     FixtureParse(String),
+    #[error("live LWK scanning requires building with --features live-lwk")]
+    LiveFeatureDisabled,
+    #[error("unsupported network {0}; v0.2 live capture only supports testnet")]
+    UnsupportedNetwork(String),
+    #[error("live LWK scan failed: {0}")]
+    LiveScan(String),
 }
 
 pub fn scan_fixture(path: &Path) -> Result<ObservedState, ScanError> {
@@ -38,14 +48,92 @@ pub fn scan_live_incomplete(request: &ScanRequest) -> Result<ObservedState, Scan
         complete: false,
         demo: false,
         source: format!(
-            "live LWK scan boundary reserved for {}; descriptor {}",
-            request
-                .electrum_url
-                .as_deref()
-                .unwrap_or("elements-testnet.blockstream.info:50002"),
+            "live LWK scan requires --features live-lwk for {}; descriptor {}",
+            electrum_endpoint(request),
             descriptor.redacted_scope()
         ),
+        live_evidence: Some(LiveEvidence {
+            endpoint: electrum_endpoint(request),
+            descriptor_scope: descriptor.redacted_scope(),
+            tx_count: 0,
+            txid: request.txid.clone(),
+            gaid_redacted: request.gaid_redacted.clone(),
+        }),
     })
+}
+
+#[cfg(not(feature = "live-lwk"))]
+pub fn scan_live(request: &ScanRequest) -> Result<ObservedState, ScanError> {
+    let _ = WatchOnlyDescriptor::parse(request.descriptor.clone())?;
+    Err(ScanError::LiveFeatureDisabled)
+}
+
+#[cfg(feature = "live-lwk")]
+pub fn scan_live(request: &ScanRequest) -> Result<ObservedState, ScanError> {
+    use lwk_wollet::elements::AssetId;
+    use lwk_wollet::{
+        full_scan_with_electrum_client, ElectrumClient, ElectrumUrl, ElementsNetwork,
+        WolletBuilder, WolletDescriptor,
+    };
+    use std::str::FromStr;
+
+    if request.network != "testnet" {
+        return Err(ScanError::UnsupportedNetwork(request.network.clone()));
+    }
+
+    let descriptor = WatchOnlyDescriptor::parse(request.descriptor.clone())?;
+    let wollet_descriptor: WolletDescriptor = descriptor
+        .as_str()
+        .parse()
+        .map_err(|error| ScanError::LiveScan(format!("descriptor parse failed: {error}")))?;
+    let mut wollet = WolletBuilder::new(ElementsNetwork::LiquidTestnet, wollet_descriptor)
+        .build()
+        .map_err(|error| ScanError::LiveScan(format!("wollet build failed: {error}")))?;
+
+    let endpoint = electrum_endpoint(request);
+    let electrum_url = ElectrumUrl::new(&endpoint, true, true)
+        .map_err(|error| ScanError::LiveScan(format!("electrum url failed: {error}")))?;
+    let mut electrum_client = ElectrumClient::new(&electrum_url)
+        .map_err(|error| ScanError::LiveScan(format!("electrum client failed: {error}")))?;
+    full_scan_with_electrum_client(&mut wollet, &mut electrum_client)
+        .map_err(|error| ScanError::LiveScan(format!("full scan failed: {error}")))?;
+
+    let asset_id = AssetId::from_str(&request.asset_id)
+        .map_err(|error| ScanError::LiveScan(format!("asset id parse failed: {error}")))?;
+    let balance = wollet
+        .balance()
+        .map_err(|error| ScanError::LiveScan(format!("balance failed: {error}")))?;
+    let amount = balance.get(&asset_id).copied().unwrap_or_default();
+    let tx_count = wollet
+        .transactions()
+        .map_err(|error| ScanError::LiveScan(format!("transactions failed: {error}")))?
+        .len();
+
+    Ok(ObservedState {
+        asset_id: request.asset_id.clone(),
+        total_supply: amount,
+        holders: vec![HolderAmount {
+            category: "descriptor-scope".to_string(),
+            amount,
+        }],
+        complete: true,
+        demo: false,
+        source: "lwk_wollet full_scan_with_electrum_client".to_string(),
+        live_evidence: Some(LiveEvidence {
+            endpoint,
+            descriptor_scope: descriptor.redacted_scope(),
+            tx_count,
+            txid: request.txid.clone(),
+            gaid_redacted: request.gaid_redacted.clone(),
+        }),
+    })
+}
+
+fn electrum_endpoint(request: &ScanRequest) -> String {
+    request
+        .electrum_url
+        .clone()
+        .unwrap_or_else(|| "elements-testnet.blockstream.info:50002".to_string())
 }
 
 #[cfg(feature = "live-lwk")]
@@ -77,6 +165,8 @@ mod tests {
             descriptor: "ct(elwpk([00000000/84h/1h/0h]tpub.../0/*))".to_string(),
             network: "testnet".to_string(),
             electrum_url: None,
+            txid: None,
+            gaid_redacted: None,
         })
         .unwrap();
         assert!(!state.complete);

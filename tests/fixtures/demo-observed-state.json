@@ -13,5 +13,6 @@
   ],
   "complete": true,
   "demo": true,
-  "source": "committed fixture; no live Liquid testnet scan"
+  "source": "committed fixture; no live Liquid testnet scan",
+  "live_evidence": null
 }
